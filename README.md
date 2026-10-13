@@ -57,6 +57,16 @@ multiplexes the five AAC-LC 44.1 kHz streams with the manifest (stem names/color
 mastering DSP chain) into a single MP4 file. Speed on an RTX 4090 laptop: ~20 s for a
 4.5-minute track (`htdemucs`, 1 pass).
 
+## Development
+
+Before pushing any UI change, run the smoke test against the running app — it click-tests
+pick/bulk/go/stop with network interception (no real dialog, no real conversion):
+
+```
+pip install playwright && playwright install chromium
+python test_ui_smoke.py
+```
+
 ## Credits
 
 - [Demucs](https://github.com/facebookresearch/demucs) (Meta, MIT) — audio separation model and `htdemucs`/`htdemucs_ft` pretrained weights.
