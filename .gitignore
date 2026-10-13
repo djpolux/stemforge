@@ -9,6 +9,7 @@ stems_out/
 models/
 docs/*
 !docs/screenshot.png
+!docs/demo.gif
 batch.log
 app_recents.json
 
