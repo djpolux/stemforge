@@ -46,7 +46,7 @@ def api_scan(folder: str = '', out: str = ''):
     for f in convert_gpu.list_audio(folder):
         st = 'done' if os.path.exists(os.path.join(o, os.path.splitext(f)[0] + '.stem.mp4')) else 'todo'
         sz = os.path.getsize(os.path.join(folder, f)) / 1e6
-        rows.append({'name': f, 'size': f'{sz:.1f} Mo', 'status': st})
+        rows.append({'name': f, 'size': f'{sz:.1f} MB', 'status': st})
     S['files'] = rows; S['folder'] = folder
     return {'files': rows, 'recents': load_recents()}
 
@@ -57,7 +57,7 @@ def api_scanpaths(p: str = ''):
     rows = []
     for fp in paths:
         d = os.path.dirname(fp); n = os.path.basename(fp)
-        try: sz = f'{os.path.getsize(fp)/1e6:.1f} Mo'
+        try: sz = f'{os.path.getsize(fp)/1e6:.1f} MB'
         except Exception: sz = '?'
         st = 'done' if os.path.exists(os.path.join(d, 'stems', os.path.splitext(n)[0] + '.stem.mp4')) else 'todo'
         rows.append({'file': fp, 'dir': d, 'name': n, 'size': sz, 'status': st})
