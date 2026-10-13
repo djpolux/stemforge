@@ -1,0 +1,6 @@
+# GPU users: install torch first from the CUDA index
+#   pip install torch --index-url https://download.pytorch.org/whl/cu121
+demucs
+fastapi
+uvicorn
+numpy

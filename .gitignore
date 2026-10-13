@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+
+# working artifacts — never publish
+*.stem.mp4
+stems/
+stems_out/
+models/
+docs/
+batch.log
+app_recents.json
+
+# local test material
+test_*/
+*.wav
