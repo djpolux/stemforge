@@ -51,7 +51,7 @@ Le moteur utilise Demucs de Meta — voir [Credits](#credits). Le fichier de sor
 ## Install (Windows, Python 3.10+)
 
 ```bat
-git clone https://github.com/<your-account>/stemforge.git
+git clone https://github.com/djpolux/stemforge.git
 cd stemforge
 py -m venv .venv
 .venv\Scripts\activate
@@ -95,9 +95,12 @@ mastering DSP chain) into a single MP4 file. Speed on an RTX 4090 laptop: ~20 s 
 
 ## Credits
 
-- [Demucs](https://github.com/facebookresearch/demucs) (Meta, MIT) — audio separation.
-- [ffmpeg](https://ffmpeg.org) — AAC encoding/muxing.
+- [Demucs](https://github.com/facebookresearch/demucs) (Meta, MIT) — audio separation model and `htdemucs`/`htdemucs_ft` pretrained weights.
+- [ffmpeg](https://ffmpeg.org) — AAC encoding/muxing (LGPL/GPL build depending on your install).
 - [FastAPI](https://fastapi.tiangolo.com), [PyTorch](https://pytorch.org).
+
+Stem Forge (code + MP4 writer) is MIT. If you install third-party models or
+plugins, they carry their own licenses — check them separately.
 
 ## License
 
