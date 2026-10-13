@@ -10,6 +10,7 @@ input[type=text],select{background:var(--card);border:1px solid #2a3040;color:va
 #out{flex:1;min-width:200px}
 button{background:var(--acc);border:0;color:#fff;border-radius:8px;padding:9px 14px;font-size:14px;cursor:pointer}
 button.ghost{background:#2a3040} button.go{background:var(--ok);font-weight:700;padding:12px 22px}
+#lang{background:transparent;border-color:#2a3040;color:var(--dim);font:700 13px system-ui}
 .stats{display:flex;gap:18px;color:var(--dim);margin:8px 0 12px} .stats b{color:var(--txt)}
 .bulk{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;align-items:center}
 .tbl{background:var(--card);border-radius:10px;overflow:auto;max-height:52vh;border:1px solid #2a3040}
@@ -24,34 +25,91 @@ tr.done td{color:var(--dim)} tr.done .st{color:var(--ok)}
 .hint{color:var(--dim);font-size:13px;margin:2px 0 0}
 </style></head>
 <body><div class="wrap">
-<h1>Stem Forge</h1>
-<p class="sub">Sélectionne 1 fichier, 20 ou tout un dossier dans la fenêtre Windows. Clic sur une ligne = coche/décoche. Produit des stems 5 pistes lus nativement par Traktor Pro 4.</p>
+<div class="bar"><h1 style="flex:1">Stem Forge</h1><select id="lang"><option value="fr">Français</option><option value="en">English</option></select></div>
+<p class="sub" id="sub"></p>
 <div class="bar">
-  <button class="go" onclick="pick()">📂 Sélectionner des fichiers…</button>
-  <span class="hint">dans la fenêtre Windows : Ctrl+clic pour en prendre plusieurs, Ctrl+A pour tout</span>
+  <button class="go" id="pick">📂 <span data-t="pick"></span></button>
+  <span class="hint" id="hint"></span>
 </div>
 <div class="bar">
-  <input type="text" id="out" placeholder="Sortie (vide = sous-dossier stems du dossier source)">
-  <select id="model"><option value="htdemucs">htdemucs — rapide (20 s)</option><option value="htdemucs_ft">htdemucs_ft — qualité, moins de bleed (40 s)</option></select>
-  <select id="shifts"><option value="1">1 passage (recommandé)</option><option value="0">0 (turbo)</option><option value="2">2 (défaut Demucs)</option></select>
+  <input type="text" id="out" data-ph="outPh">
+  <select id="model">
+    <option value="htdemucs"></option>
+    <option value="htdemucs_ft"></option>
+  </select>
+  <select id="shifts"><option value="1"></option><option value="0"></option><option value="2"></option></select>
   <select id="workers"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
   <span class="chip" id="device"></span>
 </div>
-<div class="stats">Fichiers: <b id="ntot">0</b> · Sélectionnés: <b id="nsel">0</b> · Déjà Stem: <b id="ndone">0</b></div>
+<div class="stats"><span data-t="stFiles"> </span> <b id="ntot">0</b> · <span data-t="stSel"></span> <b id="nsel">0</b> · <span data-t="stDone"></span> <b id="ndone">0</b></div>
 <div class="bulk">
-  <button class="ghost" onclick="bulk('all')">Tout</button>
-  <button class="ghost" onclick="bulk('none')">Aucun</button>
-  <button class="ghost" onclick="bulk('todo')">Seulement restants</button>
-  <button class="ghost" onclick="bulk('inv')">Inverser</button>
-  <input type="text" id="q" placeholder="Filtrer par nom…" oninput="bulk('filter')" style="min-width:160px">
-  <button class="go" onclick="launch()">🚀 Convertir la sélection</button>
-  <button class="ghost" onclick="stopB()">⏸ Stop</button>
+  <button class="ghost" id="bAll"></button>
+  <button class="ghost" id="bNone"></button>
+  <button class="ghost" id="bTodo"></button>
+  <button class="ghost" id="bInv"></button>
+  <input type="text" id="q" data-ph="filter" oninput="bulk('filter')" style="min-width:160px">
+  <button class="go" id="go">🚀 <span data-t="go"></span></button>
+  <button class="ghost" id="stop">⏸ <span data-t="stop"></span></button>
 </div>
-<div class="tbl"><table><thead><tr><th>Fichier</th><th>Dossier</th><th>Taille</th><th>Statut</th></tr></thead><tbody id="tb"></tbody></table></div>
-<div class="log" id="log">Prêt.</div>
+<div class="tbl"><table><thead><tr><th id="thF"></th><th id="thD"></th><th id="thS"></th><th id="thT"></th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="log" id="log"></div>
 </div>
 <script>
-let rows=[], sel=new Set(), timer=null;
+let rows=[], sel=new Set(), timer=null, LANG='fr';
+const I18N={
+ fr:{sub:"Sélectionne 1 fichier, 20 ou tout un dossier dans la fenêtre Windows. Clic sur une ligne = coche/décoche. Produit des stems 5 pistes lus nativement par Traktor Pro 4.",
+   pick:"Sélectionner des fichiers…", hint:"dans la fenêtre Windows : Ctrl+clic pour en prendre plusieurs, Ctrl+A pour tout",
+   outPh:"Sortie (vide = sous-dossier stems du dossier source)",
+   mod0:"htdemucs — rapide (20 s)", mod1:"htdemucs_ft — qualité, moins de bleed (40 s)",
+   sh0:"1 passage (recommandé)", sh1:"0 (turbo)", sh2:"2 (défaut Demucs)",
+   stFiles:"Fichiers:", stSel:"Sélectionnés:", stDone:"Déjà Stem:",
+   bAll:"Tout", bNone:"Aucun", bTodo:"Seulement restants", bInv:"Inverser", filter:"Filtrer par nom…",
+   go:"Convertir la sélection", stop:"Stop",
+   thF:"Fichier", thD:"Dossier", thS:"Taille", thT:"Statut",
+   done:"✔ déjà Stem", todo:"⬜ à faire", ready:"Prêt.",
+   opened:"📂 Fenêtre Windows ouverte — 1 fichier, Ctrl+clic multiple, Ctrl+A=tout…", none0:"Aucun fichier choisi.",
+   loaded:f=>f+" fichier(s) chargé(s) — tous cochés.",
+   noSel:"⚠ Aucun fichier sélectionné", launching:"🚀 Lancement…",
+   finished:"\n— batch terminé —", readyLog:"(pas encore de log)"},
+ en:{sub:"Pick 1 file, 20, or a whole folder in the Windows dialog. Click a row to check/uncheck it. Produces 5-track stem files natively read by Traktor Pro 4.",
+   pick:"Select files…", hint:"in the Windows dialog: Ctrl+click to pick several, Ctrl+A for all",
+   outPh:"Output (empty = stems subfolder next to the sources)",
+   mod0:"htdemucs — fast (20 s)", mod1:"htdemucs_ft — quality, less bleed (40 s)",
+   sh0:"1 pass (recommended)", sh1:"0 (turbo)", sh2:"2 (Demucs default)",
+   stFiles:"Files:", stSel:"Selected:", stDone:"Already stems:",
+   bAll:"All", bNone:"None", bTodo:"Only remaining", bInv:"Invert", filter:"Filter by name…",
+   go:"Convert selection", stop:"Stop",
+   thF:"File", thD:"Folder", thS:"Size", thT:"Status",
+   done:"✔ already a stem", todo:"⬜ to convert", ready:"Ready.",
+   opened:"📂 Windows dialog open — 1 file, Ctrl+click multiple, Ctrl+A=all…", none0:"No file selected.",
+   loaded:f=>f+" file(s) loaded — all checked.",
+   noSel:"⚠ No file selected", launching:"🚀 Launching…",
+   finished:"\n— batch finished —", readyLog:"(no log yet)"}
+};
+function T(key){return I18N[LANG][key]}
+let ev_ctrl=false;
+document.addEventListener('keydown',e=>{ev_ctrl=e.ctrlKey});
+function applyLang(){
+  const d=I18N[LANG];
+  document.documentElement.lang=LANG;
+  document.getElementById('sub').textContent=d.sub;
+  document.querySelectorAll('[data-t]').forEach(el=>el.textContent=d[el.dataset.t]);
+  document.querySelectorAll('[data-ph]').forEach(el=>el.placeholder=d[el.dataset.ph]);
+  document.getElementById('model').options[0].textContent=d.mod0;
+  document.getElementById('model').options[1].textContent=d.mod1;
+  const sh=document.getElementById('shifts');
+  sh.options[0].textContent=d.sh0; sh.options[1].textContent=d.sh1; sh.options[2].textContent=d.sh2;
+  ['bAll','bNone','bTodo','bInv','go','stop'].forEach(id=>{
+    const span=document.getElementById(id).querySelector('span');
+    if(span) span.textContent=d[{'bAll':'bAll','bNone':'bNone','bTodo':'bTodo','bInv':'bInv','go':'go','stop':'stop'}[id]];
+    else document.getElementById(id).textContent=d[{'bAll':'bAll','bNone':'bNone','bTodo':'bTodo','bInv':'bInv','go':'go','stop':'stop'}[id]];
+  });
+  ['thF','thD','thS','thT'].forEach(id=>document.getElementById(id).textContent=d[id]);
+  if(!document.getElementById('log').textContent.includes('🚀') && !document.getElementById('log').textContent.includes('⚠'))
+    document.getElementById('log').textContent=d.readyLog;
+  localStorage.setItem('sf_lang', LANG);
+  draw();
+}
 function $(id){return document.getElementById(id)}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function draw(){
@@ -62,25 +120,21 @@ function draw(){
     if(r.status==='done') tr.classList.add('done');
     const d=r.dir.split('\\').pop()||r.dir;
     tr.innerHTML=`<td>${esc(r.name)}</td><td class="dir">${esc(d)}</td><td>${r.size}</td>`+
-      `<td class="st">${r.status==='done'?'✔ déjà Stem':'⬜ à faire'}</td>`;
-    tr.onclick=()=>{
-      if(r.status==='done' && !ev_ctrl) return;
-      sel.has(r.file)?sel.delete(r.file):sel.add(r.file);
-      draw(); };
+      `<td class="st">${r.status==='done'?T('done'):T('todo')}</td>`;
+    tr.onclick=()=>{ if(r.status==='done'&&!ev_ctrl) return;
+      sel.has(r.file)?sel.delete(r.file):sel.add(r.file); draw(); };
     tb.appendChild(tr);
   }
   $('ntot').textContent=rows.length; $('nsel').textContent=sel.size;
   $('ndone').textContent=rows.filter(r=>r.status==='done').length;
 }
-let ev_ctrl=false;
-document.addEventListener('keydown',e=>{ev_ctrl=e.ctrlKey});
 async function pick(){
-  $('log').textContent='📂 Fenêtre Windows ouverte — 1 fichier, Ctrl=clic multiple, Ctrl+A=tout…';
+  $('log').textContent=T('opened');
   const r=await fetch('/dialog').then(x=>x.json()).catch(e=>({paths:[]}));
-  if(!r.paths || !r.paths.length){ $('log').textContent='Aucun fichier choisi.'; return; }
+  if(!r.paths || !r.paths.length){ $('log').textContent=T('none0'); return; }
   const rr=await fetch('/api/scanpaths?p='+encodeURIComponent(r.paths.join('|'))).then(x=>x.json());
   rows=rr.files; sel=new Set(rows.map(x=>x.file));
-  $('log').textContent=rows.length+' fichier(s) chargé(s) — tous cochés.';
+  $('log').textContent=T('loaded')(rows.length);
   draw();
 }
 function bulk(m){
@@ -93,21 +147,25 @@ function bulk(m){
 }
 function selList(){ const out=[]; for(const r of rows) if(sel.has(r.file)) out.push(r.file); return out; }
 async function launch(){
-  const sel=selList(); if(!sel.length){ $('log').textContent='⚠ Aucun fichier sélectionné'; return; }
-  const body={'selectedFull':sel,'model':$('model').value,'shifts':+$('shifts').value,'workers':+$('workers').value};
+  const sl=selList(); if(!sl.length){ $('log').textContent=T('noSel'); return; }
+  const body={'selectedFull':sl,'model':$('model').value,'shifts':+$('shifts').value,'workers':+$('workers').value};
   const r=await fetch('/api/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(x=>x.json());
   if(!r.ok){ $('log').textContent='⚠ '+r.msg; return; }
   if(timer) clearInterval(timer);
-  $('log').textContent='🚀 Lancement…\n';
+  $('log').textContent=T('launching')+'\n';
   timer=setInterval(pollApi,2000); pollApi();
 }
 async function stopB(){ await fetch('/api/stop',{method:'POST'}); }
 async function pollApi(){
   const r=await fetch('/api/poll').then(x=>x.json());
   if(r.device) $('device').textContent=r.device;
-  $('log').textContent=r.log.length?r.log.join('\n'):'(pas encore de log)';
+  $('log').textContent=r.log.length?r.log.join('\n'):$(('log')).textContent||T('readyLog');
   $('log').scrollTop=$('log').scrollHeight;
-  if(!r.running && timer){ clearInterval(timer); timer=null; $('log').textContent+='\n— batch terminé —'; }
+  if(!r.running && timer){ clearInterval(timer); timer=null; $('log').textContent+=T('finished'); }
 }
+document.getElementById('lang').addEventListener('change',e=>{LANG=e.target.value; applyLang();});
+LANG=localStorage.getItem('sf_lang')||'fr';
+document.getElementById('lang').value=LANG;
+applyLang();
 pollApi();
 </script></body></html>
