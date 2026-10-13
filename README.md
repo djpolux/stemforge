@@ -2,7 +2,7 @@
 
 ![Stem Forge UI](docs/screenshot.png?v=2)
 
-Batch-convert whole folders of music tracks into **5-stream stem files** (master + drums + bass + other + vocals) that DJ software can load — verified working with **Traktor Pro 4**.
+Batch-convert whole folders of music tracks into **5-stream stem files** (master + drums + bass + other + vocals) that DJ software can load — verified working with **Traktor Pro 3** and **Traktor Pro 4** with the same file.
 
 - **Web app** (FastAPI): pick files through the native Windows file dialog (1, 20 or Ctrl+A), launch the batch, watch the live log, stop and resume later — already-converted tracks are skipped.
 - **CLI**: convert a folder in one command.
@@ -17,7 +17,7 @@ Batch-convert whole folders of music tracks into **5-stream stem files** (master
 
 ![Stem Forge UI](docs/screenshot.png?v=2)
 
-Convertissez des dossiers entiers de morceaux en **fichiers stems 5 pistes** (mix + drums + bass + other + vocals) que votre logiciel DJ charge nativement — **vérifié avec Traktor Pro 4**.
+Convertissez des dossiers entiers de morceaux en **fichiers stems 5 pistes** (mix + drums + bass + other + vocals) que votre logiciel DJ charge nativement — **vérifié avec Traktor Pro 3 et Traktor Pro 4** (même fichier).
 
 **Installation** (Windows, Python 3.10+ — [ffmpeg](https://ffmpeg.org) requis sur le `PATH`) :
 
