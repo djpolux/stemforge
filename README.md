@@ -1,5 +1,7 @@
 # Stem Forge
 
+![Stem Forge UI](docs/screenshot.png)
+
 Batch-convert whole folders of music tracks into **5-stream stem files** (master + drums + bass + other + vocals) that DJ software can load — verified working with **Traktor Pro 4**.
 
 - **Web app** (FastAPI): pick files through the native Windows file dialog (1, 20 or Ctrl+A), launch the batch, watch the live log, stop and resume later — already-converted tracks are skipped.
