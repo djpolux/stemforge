@@ -164,6 +164,13 @@ async function pollApi(){
   if(!r.running && timer){ clearInterval(timer); timer=null; $('log').textContent+=T('finished'); }
 }
 document.getElementById('lang').addEventListener('change',e=>{LANG=e.target.value; applyLang();});
+document.getElementById('pick').addEventListener('click', pick);
+document.getElementById('bAll').addEventListener('click', ()=>bulk('all'));
+document.getElementById('bNone').addEventListener('click', ()=>bulk('none'));
+document.getElementById('bTodo').addEventListener('click', ()=>bulk('todo'));
+document.getElementById('bInv').addEventListener('click', ()=>bulk('inv'));
+document.getElementById('go').addEventListener('click', launch);
+document.getElementById('stop').addEventListener('click', stopB);
 LANG=localStorage.getItem('sf_lang')||'fr';
 document.getElementById('lang').value=LANG;
 applyLang();
