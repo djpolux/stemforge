@@ -59,6 +59,19 @@ def default_stem_json():
                             "threshold": 0}},
             "offset": 0, "stems": DEFAULT_STEMS, "version": 2}
 
+def tp3_stem_json():
+    """metadata manifest in the older v1 layout (older DJ builds)."""
+    return {"mastering_dsp": {
+                "compressor": {"attack": 0.003000000026077032, "dry_wet": 50, "enabled": False,
+                               "hp_cutoff": 300, "input_gain": 6, "output_gain": 0, "ratio": 3,
+                               "release": 0.300000011920929, "threshold": 0},
+                "limiter": {"ceiling": 0, "enabled": False, "release": 0.001000000047497451,
+                            "threshold": 0}},
+            "version": 1, "stems": DEFAULT_STEMS}
+
+# older-build container flavour: plain isom brand, no extension uuid, moov before mdat
+FTYP_TP3 = (b'\x00\x00\x00\x14' + b'ftyp' + b'isom' + struct.pack('>I', 0x00035214) + b'isom')
+
 
 def encode_aac_m4a(wav_in, m4a_out, bitrate='192k'):
     subprocess.check_call([FFMPEG, '-y', '-loglevel', 'error', '-i', wav_in,
@@ -174,8 +187,11 @@ def build_trak(track_id, n, sizes, esds, timescale, chunk_offset):
     body = tkhd + mdia
     return struct.pack('>I', 8 + len(body)) + b'trak' + body
 
-def write_stem(out_path, wavs, stems_json=None, bitrate='192k'):
-    """wavs = [master, drums, bass, other, vocals] — 5 stereo 44.1 kHz files."""
+def write_stem(out_path, wavs, stems_json=None, bitrate='192k', legacy=True):
+    """wavs = [master, drums, bass, other, vocals] — 5 stereo 44.1 kHz files.
+    Default container flavour (legacy=True) works with BOTH older and current
+    DJ builds (verified: Traktor Pro 3 and Traktor Pro 4). legacy=False writes
+    the modern flavour."""
     tmp = tempfile.mkdtemp(prefix='stemb_')
     from concurrent.futures import ThreadPoolExecutor
     paths = [None] * len(wavs)
@@ -191,35 +207,45 @@ def write_stem(out_path, wavs, stems_json=None, bitrate='192k'):
     for st in streams:
         chunk_offsets.append(len(mdat_payload))
         for smp in st['samples']: mdat_payload += smp
-    ftyp = FTYP
-    uuid_box = (struct.pack('>I', 40) + b'uuid' + STEM_LAYOUT_UUID +
-                struct.pack('>I', 12) + b'10.0.26100.0')
-    mdat_start = len(ftyp) + len(uuid_box) + 8
-    traks = []
-    for i, st in enumerate(streams):
-        traks.append(build_trak(i + 2, st['n'], [len(x) for x in st['samples']], ESDS,
-                                st['timescale'], mdat_start + chunk_offsets[i]))
-    total_dur = 1024 * streams[0]['n']
-    mvhd = fbox(b'mvhd', 0, 0, struct.pack('>II', 0xe6f2e1fa, 0xe6f2e1fa) +
-                struct.pack('>II', 44100, total_dur) +
-                struct.pack('>I', 0x00010000) + struct.pack('>HH', 0x0100, 0) +
-                b'\x00' * 8 +
-                struct.pack('>9I', 0x00010000, 0, 0, 0, 0x00010000, 0,
-                            0, 0, 0x40000000) +
-                b'\x00' * 24 +
-                struct.pack('>I', 6))
-    if isinstance(stems_json, bytes):
-        jsb = stems_json
-    elif stems_json is None:
-        jsb = STEM_JSON
-    else:
-        jsb = json.dumps(stems_json, separators=(',', ':')).encode('ascii') + b'\x00'
-    ilst = box(b'ilst', b'\x00\x00\x00\x08NITR')
-    mdh = fbox(b'hdlr', 0, 0, b'\x00'*4 + b'mdir' + b'\x00'*13)
-    meta = fbox(b'meta', 0, 0, mdh + ilst)
-    udta = box(b'udta', meta + b'\x00\x00\x00\x08Xtra' + box(b'stem', jsb))
-    moov = box(b'moov', mvhd + b''.join(traks) + udta)
+    ftyp = FTYP if not legacy else FTYP_TP3
+    uuid_box = b'' if legacy else (
+        struct.pack('>I', 40) + b'uuid' + STEM_LAYOUT_UUID +
+        struct.pack('>I', 12) + b'10.0.26100.0')
+
+    def build_moov(chunk_base):
+        traks = []
+        for i, st in enumerate(streams):
+            traks.append(build_trak(i + 2, st['n'], [len(x) for x in st['samples']], ESDS,
+                                    st['timescale'], chunk_base + chunk_offsets[i]))
+        total_dur = 1024 * streams[0]['n']
+        mvhd = fbox(b'mvhd', 0, 0, struct.pack('>II', 0xe6f2e1fa, 0xe6f2e1fa) +
+                    struct.pack('>II', 44100, total_dur) +
+                    struct.pack('>I', 0x00010000) + struct.pack('>HH', 0x0100, 0) +
+                    b'\x00' * 8 +
+                    struct.pack('>9I', 0x00010000, 0, 0, 0, 0x00010000, 0,
+                                0, 0, 0x40000000) +
+                    b'\x00' * 24 +
+                    struct.pack('>I', 6))
+        if isinstance(stems_json, bytes):
+            jsb = stems_json
+        elif stems_json is None:
+            manifest = tp3_stem_json() if legacy else default_stem_json()
+            jsb = json.dumps(manifest, separators=(',', ':')).encode('ascii') + b'\x00'
+        else:
+            jsb = json.dumps(stems_json, separators=(',', ':')).encode('ascii') + b'\x00'
+        ilst = box(b'ilst', b'\x00\x00\x00\x08NITR')
+        mdh = fbox(b'hdlr', 0, 0, b'\x00'*4 + b'mdir' + b'\x00'*13)
+        meta = fbox(b'meta', 0, 0, mdh + ilst)
+        udta = box(b'udta', meta + b'\x00\x00\x00\x08Xtra' + box(b'stem', jsb))
+        return box(b'moov', mvhd + b''.join(traks) + udta)
+
+    moov = build_moov(len(ftyp) + len(uuid_box) + 8) if not legacy else None
     mdat = struct.pack('>I', 8 + len(mdat_payload)) + b'mdat' + bytes(mdat_payload)
+    if legacy:
+        moov = build_moov(0)
+        moov = build_moov(len(ftyp) + len(moov) + 8)   # offsets stco -> mdat après moov
+        with open(out_path, 'wb') as f: f.write(ftyp + moov + mdat)
+        return out_path
     with open(out_path, 'wb') as f: f.write(ftyp + uuid_box + mdat + moov)
     return out_path
 
