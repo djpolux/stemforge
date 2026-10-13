@@ -12,46 +12,6 @@ Batch-convert whole folders of music tracks into **5-stream stem files** (master
 > Not affiliated with, endorsed by, or connected to Native Instruments. Use it with music you own. Respect the terms of your DJ software.
 
 ---
-
-## Français
-
-![Stem Forge UI](docs/screenshot.png?v=2)
-
-Convertissez des dossiers entiers de morceaux en **fichiers stems 5 pistes** (mix + drums + bass + other + vocals) que votre logiciel DJ charge nativement — **vérifié avec Traktor Pro 3 et Traktor Pro 4** (même fichier).
-
-**Installation** (Windows, Python 3.10+ — [ffmpeg](https://ffmpeg.org) requis sur le `PATH`) :
-
-```bat
-git clone https://github.com/djpolux/stemforge.git
-cd stemforge
-py -m venv .venv
-.venv\Scripts\activate
-pip install torch --index-url https://download.pytorch.org/whl/cu121
-pip install demucs fastapi uvicorn numpy
-```
-
-*(pas de GPU NVIDIA ? installez `torch` tout court — la conversion tournera sur CPU, simplement plus lente)*
-
-**Utilisation** :
-
-```bat
-python app_stem.py
-```
-
-L'interface s'ouvre sur http://127.0.0.1:9005 — bouton **📂 Sélectionner des fichiers…** (1 fichier, Ctrl+clic pour en prendre plusieurs, Ctrl+A pour tout), décochez ce que vous ne voulez pas, **🚀 Convertir**. Les modèles proposés : `htdemucs` (rapide, ~20 s/morceau) ou `htdemucs_ft` (qualité supérieure, ~40 s/morceau). Les fichiers finissent dans un sous-dossier `stems\` à côté des sources ; l'application est interrompable : relancez, les morceaux déjà convertis sont ignorés.
-
-La ligne de commande fait la même chose sans interface :
-
-```bat
-python convert_gpu.py "D:\Musique\ma playlist"
-```
-
-Le moteur utilise Demucs de Meta — voir [Credits](#credits). Le fichier de sortie est un MP4 standard multiplexé avec 5 pistes AAC et les métadonnées stem.
-
-> Non affilié à Native Instruments. À utiliser avec des morceaux que vous possédez, dans le respect des conditions de votre logiciel DJ.
-
----
-
 ## Install (Windows, Python 3.10+)
 
 ```bat
