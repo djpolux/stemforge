@@ -11,6 +11,8 @@ Batch-convert whole folders of music tracks into **5-stream stem files** (master
 
 > Not affiliated with, endorsed by, or connected to Native Instruments. Use it with music you own. Respect the terms of your DJ software.
 
+> ⚠️ **Early release.** Stem Forge has been tested on the author's own setup (Windows 11, NVIDIA RTX 4090, Python with CUDA). A clean install on other machines has not been fully validated yet, so the dependency versions below may need adjusting (PyTorch / torchaudio / demucs combinations are the usual suspect). If the install or a conversion fails, please [open an issue](https://github.com/djpolux/stemforge-traktor/issues) with your Windows version, GPU, Python version and the full error output — it will get fixed quickly.
+
 ---
 ## Install (Windows, Python 3.10+)
 
