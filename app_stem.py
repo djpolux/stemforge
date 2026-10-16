@@ -141,7 +141,8 @@ HTML = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html
 @app.get('/dialog')
 def dialog():
     import subprocess
-    ps = ("Add-Type -AssemblyName System.Windows.Forms | Out-Null;"
+    ps = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8;"
+          "Add-Type -AssemblyName System.Windows.Forms | Out-Null;"
           "$own = New-Object Windows.Forms.Form; $own.TopMost = $true; $own.Size = New-Object Drawing.Size(1,1); $own.StartPosition = 'Manual'; $own.Location = New-Object Drawing.Point(-2000, -2000); $own.ShowInTaskbar = $false;"
           "$own.Show();"
           "$f = New-Object Windows.Forms.OpenFileDialog;"
@@ -151,7 +152,7 @@ def dialog():
           "$r = $f.ShowDialog($own); $own.Hide();"
           "if ($r -eq 'OK') { $f.FileNames }")
     try:
-        r = subprocess.run(['powershell','-NoProfile','-STA','-Command',ps], capture_output=True, text=True, timeout=1800)
+        r = subprocess.run(['powershell','-NoProfile','-STA','-Command',ps], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=1800)
         paths = [l.strip() for l in (r.stdout or '').splitlines() if l.strip()]
         print(f'[TRACE] dialog -> {len(paths)} fichier(s)', flush=True)
         return {'paths': paths}

@@ -25,7 +25,7 @@ def sep_dir_of(out, stem_file):
     return os.path.join(out, os.path.splitext(stem_file)[0])
 
 def run(cmd, **kw):
-    r = subprocess.run(cmd, capture_output=True, text=True, **kw)
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace', **kw)
     if r.returncode != 0:
         raise RuntimeError(f'cmd échec ({r.returncode}): {" ".join(cmd)}\n{r.stderr[-2000:]}')
     return r
