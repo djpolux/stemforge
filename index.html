@@ -33,6 +33,7 @@ tr.done td{color:var(--dim)} tr.done .st{color:var(--ok)}
 </div>
 <div class="bar">
   <input type="text" id="out" data-ph="outPh">
+  <button id="pickOut">📁 <span data-t="outBtn"></span></button>
   <select id="model">
     <option value="htdemucs"></option>
     <option value="htdemucs_ft"></option>
@@ -58,7 +59,7 @@ tr.done td{color:var(--dim)} tr.done .st{color:var(--ok)}
 let rows=[], sel=new Set(), timer=null, LANG='fr';
 const I18N={
  fr:{sub:"Sélectionne 1 fichier, 20 ou tout un dossier dans la fenêtre Windows. Clic sur une ligne = coche/décoche. Produit des stems 5 pistes lus nativement par Traktor Pro 4.",
-   pick:"Sélectionner des fichiers…", hint:"dans la fenêtre Windows : Ctrl+clic pour en prendre plusieurs, Ctrl+A pour tout",
+   outBtn:"Choisir…", pick:"Sélectionner des fichiers…", hint:"dans la fenêtre Windows : Ctrl+clic pour en prendre plusieurs, Ctrl+A pour tout",
    outPh:"Sortie (vide = sous-dossier stems du dossier source)",
    mod0:"htdemucs — rapide (20 s)", mod1:"htdemucs_ft — qualité, moins de bleed (40 s)",
    sh0:"1 passage (recommandé)", sh1:"0 (turbo)", sh2:"2 (défaut Demucs)",
@@ -72,7 +73,7 @@ const I18N={
    noSel:"⚠ Aucun fichier sélectionné", launching:"🚀 Lancement…",
    finished:"\n— batch terminé —", readyLog:"(pas encore de log)"},
  en:{sub:"Pick 1 file, 20, or a whole folder in the Windows dialog. Click a row to check/uncheck it. Produces 5-track stem files natively read by Traktor Pro 4.",
-   pick:"Select files…", hint:"in the Windows dialog: Ctrl+click to pick several, Ctrl+A for all",
+   outBtn:"Browse…", pick:"Select files…", hint:"in the Windows dialog: Ctrl+click to pick several, Ctrl+A for all",
    outPh:"Output (empty = stems subfolder next to the sources)",
    mod0:"htdemucs — fast (20 s)", mod1:"htdemucs_ft — quality, less bleed (40 s)",
    sh0:"1 pass (recommended)", sh1:"0 (turbo)", sh2:"2 (Demucs default)",
@@ -132,10 +133,21 @@ async function pick(){
   $('log').textContent=T('opened');
   const r=await fetch('/dialog').then(x=>x.json()).catch(e=>({paths:[]}));
   if(!r.paths || !r.paths.length){ $('log').textContent=T('none0'); return; }
-  const rr=await fetch('/api/scanpaths?p='+encodeURIComponent(r.paths.join('|'))).then(x=>x.json());
+  const rr=await fetch('/api/scanpaths?p='+encodeURIComponent(r.paths.join('|'))+'&out='+encodeURIComponent($('out').value.trim())).then(x=>x.json());
   rows=rr.files; sel=new Set(rows.map(x=>x.file));
   $('log').textContent=T('loaded')(rows.length);
   draw();
+}
+async function pickOut(){
+  const r=await fetch('/dialog_folder').then(x=>x.json()).catch(e=>({path:''}));
+  if(!r.path) return;
+  $('out').value=r.path;
+  if(rows.length){
+    const rr=await fetch('/api/scanpaths?p='+encodeURIComponent(rows.map(x=>x.file).join('|'))+'&out='+encodeURIComponent(r.path)).then(x=>x.json());
+    const st=new Map(rr.files.map(x=>[x.file,x.status]));
+    for(const x of rows) x.status=st.get(x.file)||x.status;
+    draw();
+  }
 }
 function bulk(m){
   if(m==='all') for(const r of rows) sel.add(r.file);
@@ -148,7 +160,7 @@ function bulk(m){
 function selList(){ const out=[]; for(const r of rows) if(sel.has(r.file)) out.push(r.file); return out; }
 async function launch(){
   const sl=selList(); if(!sl.length){ $('log').textContent=T('noSel'); return; }
-  const body={'selectedFull':sl,'model':$('model').value,'shifts':+$('shifts').value,'workers':+$('workers').value};
+  const body={'selectedFull':sl,'out':$('out').value.trim(),'model':$('model').value,'shifts':+$('shifts').value,'workers':+$('workers').value};
   const r=await fetch('/api/launch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(x=>x.json());
   if(!r.ok){ $('log').textContent='⚠ '+r.msg; return; }
   if(timer) clearInterval(timer);
@@ -165,6 +177,7 @@ async function pollApi(){
 }
 document.getElementById('lang').addEventListener('change',e=>{LANG=e.target.value; applyLang();});
 document.getElementById('pick').addEventListener('click', pick);
+document.getElementById('pickOut').addEventListener('click', pickOut);
 document.getElementById('bAll').addEventListener('click', ()=>bulk('all'));
 document.getElementById('bNone').addEventListener('click', ()=>bulk('none'));
 document.getElementById('bTodo').addEventListener('click', ()=>bulk('todo'));

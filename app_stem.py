@@ -51,7 +51,7 @@ def api_scan(folder: str = '', out: str = ''):
     return {'files': rows, 'recents': load_recents()}
 
 @app.get('/api/scanpaths')
-def api_scanpaths(p: str = ''):
+def api_scanpaths(p: str = '', out: str = ''):
     import urllib.parse
     paths = [x.strip() for x in p.split('|') if x.strip()]
     rows = []
@@ -59,7 +59,7 @@ def api_scanpaths(p: str = ''):
         d = os.path.dirname(fp); n = os.path.basename(fp)
         try: sz = f'{os.path.getsize(fp)/1e6:.1f} MB'
         except Exception: sz = '?'
-        st = 'done' if os.path.exists(os.path.join(d, 'stems', os.path.splitext(n)[0] + '.stem.mp4')) else 'todo'
+        st = 'done' if os.path.exists(os.path.join(stem_out(d, out.strip() or None), os.path.splitext(n)[0] + '.stem.mp4')) else 'todo'
         rows.append({'file': fp, 'dir': d, 'name': n, 'size': sz, 'status': st})
     S['files'] = rows; S['folder'] = None
     print(f'[TRACE] scanpaths -> {len(rows)} fichier(s)', flush=True)
@@ -68,14 +68,14 @@ def api_scanpaths(p: str = ''):
 @app.get('/api/recents')
 def api_recents(): return {'recents': load_recents()}
 
-def run_grouped(groups, model, shifts, workers):
+def run_grouped(groups, model, shifts, workers, out=None):
     S.update(stop=False, running=True, log=[], res=[])
     log = lambda m: S['log'].append(str(m))
     total = sum(len(v) for v in groups.values())
     dt0 = time.time()
     for folder, names in groups.items():
         if S['stop']: break
-        run_batch(folder, None, model, shifts, workers, names, trace=True)
+        run_batch(folder, out, model, shifts, workers, names, trace=True)
     dt = time.time() - dt0
     log(f'★ Terminé : {total} fichier(s) en {dt/60:.1f} min')
     S['running'] = False
@@ -122,8 +122,9 @@ def api_launch(data: dict):
         if os.path.isfile(fp): groups.setdefault(d, []).append(n)
     if not fulls: return {'ok': False, 'msg': 'Aucun fichier sélectionné'}
     print(f'[TRACE] launch -> {len(fulls)} fichier(s) dans {len(groups)} dossier(s)', flush=True)
+    out = (data.get('out') or '').strip() or None
     th = threading.Thread(target=run_grouped, args=(groups, data.get('model', 'htdemucs'),
-                            int(data.get('shifts', 1)), int(data.get('workers', 3))), daemon=True)
+                            int(data.get('shifts', 1)), int(data.get('workers', 3)), out), daemon=True)
     th.start()
     return {'ok': True}
 
@@ -158,6 +159,27 @@ def dialog():
         return {'paths': paths}
     except Exception as e:
         return {'paths': [], 'error': str(e)}
+
+# Dialog natif Windows : choix du dossier de sortie
+@app.get('/dialog_folder')
+def dialog_folder():
+    import subprocess
+    ps = ("[Console]::OutputEncoding = [Text.Encoding]::UTF8;"
+          "Add-Type -AssemblyName System.Windows.Forms | Out-Null;"
+          "$own = New-Object Windows.Forms.Form; $own.TopMost = $true; $own.Size = New-Object Drawing.Size(1,1); $own.StartPosition = 'Manual'; $own.Location = New-Object Drawing.Point(-2000, -2000); $own.ShowInTaskbar = $false;"
+          "$own.Show();"
+          "$f = New-Object Windows.Forms.FolderBrowserDialog;"
+          "$f.Description = 'Output folder for the .stem.mp4 files';"
+          "$f.ShowNewFolderButton = $true;"
+          "$r = $f.ShowDialog($own); $own.Hide();"
+          "if ($r -eq 'OK') { $f.SelectedPath }")
+    try:
+        r = subprocess.run(['powershell','-NoProfile','-STA','-Command',ps], capture_output=True, text=True, encoding='utf-8', errors='replace', timeout=1800)
+        path = (r.stdout or '').strip()
+        print(f'[TRACE] dialog_folder -> {path or "(annulé)"}', flush=True)
+        return {'path': path}
+    except Exception as e:
+        return {'path': '', 'error': str(e)}
 
 @app.get('/', response_class=HTMLResponse)
 def home():
