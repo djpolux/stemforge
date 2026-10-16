@@ -15,8 +15,8 @@ Batch-convert whole folders of music tracks into **5-stream stem files** (master
 ## Install (Windows, Python 3.10+)
 
 ```bat
-git clone https://github.com/djpolux/stemforge.git
-cd stemforge
+git clone https://github.com/djpolux/stemforge-traktor.git
+cd stemforge-traktor
 py -m venv .venv
 .venv\Scripts\activate
 
