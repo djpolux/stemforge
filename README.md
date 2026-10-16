@@ -2,7 +2,9 @@
 
 ![Stem Forge in action](docs/demo.gif?v=2)
 
-Batch-convert whole folders of music tracks into **5-stream stem files** (master + drums + bass + other + vocals) that DJ software can load — verified working with **Traktor Pro 3** and **Traktor Pro 4** with the same file.
+Batch-convert whole folders of ordinary, already-mixed music tracks (**MP3, WAV, FLAC, M4A, AAC, OGG, Opus, WMA**) into **5-stream stem files** (master + drums + bass + other + vocals) that DJ software can load — verified working with **Traktor Pro 3** and **Traktor Pro 4** with the same file.
+
+**One finished track in, one stem file out.** You don't need the producer's separate multitracks (unlike NI's Stem Creator, which assembles a stem file from parts you already have): Stem Forge separates the mixed track itself with AI, then packs the result into a single `.stem.mp4`.
 
 - **Web app** (FastAPI): pick files through the native Windows file dialog (1, 20 or Ctrl+A), launch the batch, watch the live log, stop and resume later — already-converted tracks are skipped.
 - **CLI**: convert a folder in one command.
